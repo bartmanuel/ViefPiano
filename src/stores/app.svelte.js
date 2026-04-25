@@ -1,6 +1,7 @@
 import { load, save, defaultProfile } from '../lib/storage.js';
 import { newId } from '../lib/ids.js';
 import { pickNext } from '../lib/picker.js';
+import { extendStreak } from '../lib/streak.js';
 import { ANTI_REPEAT_WINDOW } from '../config.js';
 
 const initial = load();
@@ -125,6 +126,8 @@ export function addSong({ title, composer = '', notes = '', practicing = false }
     composer: composer.trim(),
     notes: notes.trim(),
     practicing: !!practicing,
+    playCount: 0,
+    skipStreak: 0,
     lastPlayedAt: null,
     createdAt: new Date().toISOString(),
   };
@@ -180,10 +183,17 @@ export function advance(action = 'next') {
   }
 
   const leavingId = app.currentSongId;
+  const leaving = leavingId ? p.songs.find((s) => s.id === leavingId) : null;
 
-  if (action === 'next' && leavingId) {
-    const leaving = p.songs.find((s) => s.id === leavingId);
-    if (leaving) leaving.lastPlayedAt = new Date().toISOString();
+  if (action === 'next' && leaving) {
+    leaving.lastPlayedAt = new Date().toISOString();
+    leaving.playCount = (leaving.playCount ?? 0) + 1;
+    leaving.skipStreak = 0; // wel gespeeld → reset demotie
+    extendStreak(p.streak); // dag-streak alleen op echt-gespeeld
+  }
+
+  if (action === 'skip' && leaving) {
+    leaving.skipStreak = (leaving.skipStreak ?? 0) + 1;
   }
 
   if (leavingId) {
@@ -194,6 +204,11 @@ export function advance(action = 'next') {
     }
   }
 
+  // Skip → bag rebuilden zodat de gewichten meteen kloppen voor de
+  // volgende pick. Anders zou de zojuist gedemoteerde song nog volledig
+  // in de oude bag zitten en even vaak voorkomen.
+  if (action === 'skip') p.bag = [];
+
   const { pickedId, bag: newBag } = pickNext(
     $state.snapshot(p.songs),
     $state.snapshot(p.bag),
@@ -203,6 +218,37 @@ export function advance(action = 'next') {
   p.bag = newBag;
   app.currentSongId = pickedId;
   p.lastPlayedId = leavingId;
+
+  persist();
+}
+
+/**
+ * Manueel een song als "gespeeld" markeren (issue #2). Telt mee voor
+ * playCount, lastPlayedAt, history, streak en reset skipStreak — dezelfde
+ * effecten als een 'next' op het Play Screen — maar laat de currentSongId
+ * ongemoeid. Eén bag-entry van deze song wordt geconsumeerd zodat de
+ * cyclus blijft kloppen; als de song niet in de bag zit, gebeurt er niets
+ * met de bag.
+ */
+export function markPlayed(songId) {
+  const p = currentProfile();
+  if (!p) return;
+  const song = p.songs.find((s) => s.id === songId);
+  if (!song) return;
+
+  song.lastPlayedAt = new Date().toISOString();
+  song.playCount = (song.playCount ?? 0) + 1;
+  song.skipStreak = 0;
+  extendStreak(p.streak);
+
+  p.history.push(song.id);
+  const maxHistory = Math.max(ANTI_REPEAT_WINDOW * 4, 10);
+  if (p.history.length > maxHistory) {
+    p.history = p.history.slice(-maxHistory);
+  }
+
+  const idx = p.bag.indexOf(song.id);
+  if (idx >= 0) p.bag.splice(idx, 1);
 
   persist();
 }

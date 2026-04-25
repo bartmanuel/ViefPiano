@@ -7,8 +7,10 @@
     togglePracticing,
     setScreen,
     importProfileData,
+    markPlayed,
   } from '../stores/app.svelte.js';
   import { downloadProfile, parseImport } from '../lib/io.js';
+  import { displayStreak } from '../lib/streak.js';
   import SongForm from '../components/SongForm.svelte';
 
   let editing = $state(null); // null | 'new' | song-id
@@ -18,6 +20,8 @@
 
   const profile = $derived(currentProfile());
   const songs = $derived(profile?.songs ?? []);
+  const currentStreak = $derived(profile ? displayStreak(profile.streak) : 0);
+  const longestStreak = $derived(profile?.streak?.longest ?? 0);
 
   function onExport() {
     if (!profile) return;
@@ -85,6 +89,23 @@
   </header>
 
   <div class="scroll">
+    {#if profile}
+      <div class="streakbar" class:alive={currentStreak > 0}>
+        <div class="cell">
+          <span class="num">🔥 {currentStreak}</span>
+          <span class="label">huidige reeks</span>
+        </div>
+        <div class="cell">
+          <span class="num">🏆 {longestStreak}</span>
+          <span class="label">langst</span>
+        </div>
+        <div class="cell">
+          <span class="num">{profile.streak?.history?.length ?? 0}</span>
+          <span class="label">dagen totaal</span>
+        </div>
+      </div>
+    {/if}
+
     <button class="primary add" onclick={openNew}>+ Nummer toevoegen</button>
 
     {#if songs.length === 0}
@@ -100,14 +121,21 @@
               <span class="star" aria-hidden="true">{song.practicing ? '★' : '☆'}</span>
               <span class="meta">
                 <span class="title">{song.title}</span>
-                {#if song.composer}
-                  <span class="composer">{song.composer}</span>
-                {/if}
+                <span class="sub">
+                  {#if song.composer}<span class="composer">{song.composer}</span>{/if}
+                  <span class="count" title="Aantal keer gespeeld">{song.playCount ?? 0}×</span>
+                  {#if (song.skipStreak ?? 0) > 0}
+                    <span class="skipmark" title="{song.skipStreak}× achter elkaar geskipt — komt minder vaak voor">
+                      ⏭ {song.skipStreak}
+                    </span>
+                  {/if}
+                </span>
               </span>
               <span class="chev">{expandedId === song.id ? '▾' : '▸'}</span>
             </button>
             {#if expandedId === song.id}
               <div class="actions">
+                <button onclick={() => markPlayed(song.id)}>✓ Gespeeld</button>
                 <button onclick={() => togglePracticing(song.id)}>
                   {song.practicing ? 'Oefenen uit' : 'Oefenen aan'}
                 </button>
@@ -234,9 +262,56 @@
   .title {
     font-weight: 600;
   }
+  .sub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: baseline;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
   .composer {
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+  }
+  .count {
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+  }
+  .skipmark {
+    color: var(--danger);
+    background: rgba(239, 83, 80, 0.12);
+    padding: 0 0.4rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+  }
+  .streakbar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .streakbar.alive {
+    border-color: var(--primary);
+  }
+  .streakbar .cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+  }
+  .streakbar .num {
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+  .streakbar .label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
   .chev {
     color: var(--muted);

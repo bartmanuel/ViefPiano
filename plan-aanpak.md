@@ -798,6 +798,74 @@ implementatie-geschiedenis bewaart.
   in de verscheepte bundle. Bij concern: wachten op een workbox-build update
   of alternatief PWA-plugin.
 
+### Fase 7 — Streak, manueel loggen, playCount terug, skip-degradatie
+- Status: ✅ klaar
+- Trigger: GitHub-issues #1–#4. Vier inhoudelijk gerelateerde features die
+  dezelfde files raken, dus in één batch gebouwd.
+
+**Issue #1 — Streak (Duolingo-stijl)**
+- Nieuw: `src/lib/streak.js` met `dayString()`, `todayStr()`, `yesterdayStr()`,
+  `defaultStreak()`, `extendStreak()`, `displayStreak()`. Dagen als
+  `YYYY-MM-DD` in **lokale tijdzone** (bewust, anders breken DST/reizen je
+  streak onverwacht).
+- Per profiel: `streak: { current, longest, lastPlayedDay, history: [] }`.
+- `displayStreak()` toont **0 als de streak verbroken is** (laatst-gespeelde
+  dag is niet vandaag of gisteren); `extendStreak()` reset `current` pas bij
+  de eerstvolgende play. Zo zie je in de UI direct dat-ie weg is.
+- Topbar PlayScreen: `🔥 N` pill (alleen zichtbaar als streak > 0).
+- Bovenkant ListScreen: 3-kolom-balk met huidige reeks / langst / dagen
+  totaal.
+- Streak schuift mee op `advance('next')` én op `markPlayed()`; **niet** op
+  `'skip'` (een gepokte song is geen gespeelde song).
+- Tests gedraaid: nieuwe streak, idempotent op dezelfde dag, +1 na gisteren,
+  reset na gat van >1 dag, display=0 bij verbroken, longest blijft behouden.
+
+**Issue #2 — Handmatig "gespeeld" loggen**
+- Nieuw in `app.svelte.js`: `markPlayed(songId)`. Doet hetzelfde als
+  `advance('next')` voor één specifiek nummer (lastPlayedAt, playCount++,
+  skipStreak=0, history-push, streak-update, één bag-entry consumeren),
+  **maar laat `currentSongId` op het Play Screen ongemoeid**.
+- ListScreen: per rij een nieuwe primaire actie "✓ Gespeeld" naast de
+  bestaande oefen/bewerk/verwijder-knoppen.
+- Effect: ook nummers die je los van de shuffle hebt gespeeld tellen mee
+  voor de aanbeveling én voor de streak.
+
+**Issue #3 — playCount terug**
+- `playCount` veld toegevoegd op song. Bij `addSong()` default 0; bij elke
+  `advance('next')` of `markPlayed()` met +1; **niet** bij skip (skip is
+  geen play).
+- Migratie in `storage.js` zet `playCount = 0` op alle bestaande songs zonder
+  veld. Backwards-compat met de eerdere fasen.
+- ListScreen toont nu per rij `12×` als subtle counter naast de componist.
+- (Eerder uit het plan gehaald op verzoek; nu weer terug op nieuw verzoek.)
+
+**Issue #4 — Skip-degradatie in shuffle**
+- `skipStreak` veld toegevoegd op song. +1 bij elke skip; reset naar 0 bij
+  elke gespeelde-actie (`next` of `markPlayed`).
+- `picker.js` `buildBag()` houdt nu rekening met `skipStreak`:
+  - skipStreak=0 → normale gewichten (1 of `PRACTICING_WEIGHT`).
+  - skipStreak=N (>0) → kans `1/(1+N)` op **één** entry per bag-build,
+    anders **geen** entry. Geen practicing-boost meer voor gedemoteerde
+    songs (als je 'm steeds skipt is hij blijkbaar geen prioriteit).
+- **Failsafe** in `buildBag()`: als de probabilistische exclusion een lege
+  bag oplevert (alle songs gedemoteerd én geen enkele door de loting),
+  forceren we 1 entry per song. Zo blokkeert de picker nooit.
+- `advance('skip')` invalideert nu de bag (voorheen alleen op andere
+  mutaties), zodat de net-gedemoteerde song niet nog 6 picks lang in de
+  oude bag blijft hangen.
+- ListScreen rij toont `⏭ N`-pill (rood) als skipStreak > 0, met tooltip
+  uitleg.
+- Tests: song met skipStreak=3 verschijnt in **7.7%** van bag-entries
+  (verwacht: 0.25/3.25 = 7.69%). Zonder skips identiek aan vorige fase
+  (0 immediate repeats over 7000 picks). Failsafe: 0/1000 lege bags bij
+  volledig gedemoteerde set.
+
+**Datamodel update (sec)**
+- Profile: + `streak: {current, longest, lastPlayedDay, history[]}`.
+- Song: + `playCount: number`, + `skipStreak: number`.
+- Migratie heelt oudere shapes.
+- Build: 63 KB JS / 23 KB gzipped, 0 warnings.
+
 ### Wat nu nog handmatig moet
 1. **GitHub repo aanmaken** met naam `ViefPiano` (exact deze capitalization),
    push naar `main`, Settings → Pages → Source = "GitHub Actions".

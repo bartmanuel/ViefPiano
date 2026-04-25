@@ -7,6 +7,7 @@
     ensureCurrent,
     togglePracticing,
   } from '../stores/app.svelte.js';
+  import { displayStreak } from '../lib/streak.js';
 
   $effect(() => {
     ensureCurrent();
@@ -15,6 +16,7 @@
   const profile = $derived(currentProfile());
   const songs = $derived(profile?.songs ?? []);
   const current = $derived(songs.find((s) => s.id === app.currentSongId) ?? null);
+  const streak = $derived(profile ? displayStreak(profile.streak) : 0);
 
   function onNext() {
     advance('next');
@@ -33,6 +35,11 @@
       <span class="pname">{profile?.name ?? '—'}</span>
       <span class="caret">▾</span>
     </button>
+    {#if streak > 0}
+      <span class="streak" title="Dagen op rij gespeeld">
+        🔥 <strong>{streak}</strong>
+      </span>
+    {/if}
     <button class="menu" onclick={() => setScreen('list')} aria-label="Lijst">☰</button>
   </header>
 
@@ -95,6 +102,22 @@
   .caret {
     color: var(--muted);
     font-size: 0.85rem;
+  }
+  .streak {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.95rem;
+    color: var(--text);
+    margin-left: auto;
+    margin-right: 0.5rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(246, 195, 68, 0.1);
+    border: 1px solid var(--primary);
+  }
+  .streak strong {
+    color: var(--primary);
   }
   .menu {
     background: transparent;

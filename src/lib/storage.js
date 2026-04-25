@@ -1,4 +1,5 @@
 import { STORAGE_KEY, SCHEMA_VERSION } from '../config.js';
+import { defaultStreak } from './streak.js';
 
 export function defaultState() {
   return {
@@ -17,6 +18,7 @@ function defaultProfile(id, name) {
     history: [],
     bag: [],
     lastPlayedId: null,
+    streak: defaultStreak(),
     settings: { practicingWeight: 2 },
   };
 }
@@ -59,6 +61,14 @@ function migrate(data) {
     if (p.lastPlayedId === undefined) p.lastPlayedId = null;
     if (!p.settings) p.settings = { practicingWeight: 2 };
     if (!p.createdAt) p.createdAt = new Date().toISOString();
+    if (!p.streak) p.streak = defaultStreak();
+    if (!Array.isArray(p.streak.history)) p.streak.history = [];
+
+    // Songs: vul missende velden voor pre-fase-7 data.
+    for (const s of p.songs) {
+      if (typeof s.playCount !== 'number') s.playCount = 0;
+      if (typeof s.skipStreak !== 'number') s.skipStreak = 0;
+    }
   }
 
   // If activeProfileId points to a non-existent profile, pick any existing one.

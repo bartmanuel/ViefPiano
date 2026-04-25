@@ -9,11 +9,34 @@ export function shuffle(arr) {
   return arr;
 }
 
+/**
+ * Bouw een nieuwe shuffle-bag.
+ *
+ * Gewichten:
+ *  - basisgewicht = song.practicing ? practicingWeight : 1
+ *  - songs met skipStreak > 0 worden gedemoteerd: per bag-cycle krijgen ze
+ *    nog maar 1 entry, en die entry wordt slechts met kans 1/(1+skipStreak)
+ *    daadwerkelijk opgenomen. Skipt-ie 'n een aantal keer achter elkaar →
+ *    komt-ie steeds minder vaak voor, totdat je 'm wél speelt
+ *    (skipStreak reset naar 0 in app.svelte.js).
+ *
+ * Failsafe: als alle songs probabilistisch zouden worden uitgesloten
+ * (lege bag), forceren we 1 entry per song zodat picking nooit blokkeert.
+ */
 export function buildBag(songs, practicingWeight = PRACTICING_WEIGHT) {
   const bag = [];
   for (const song of songs) {
-    const copies = song.practicing ? practicingWeight : 1;
-    for (let i = 0; i < copies; i++) bag.push(song.id);
+    const skipStreak = song.skipStreak ?? 0;
+    if (skipStreak === 0) {
+      const copies = song.practicing ? practicingWeight : 1;
+      for (let i = 0; i < copies; i++) bag.push(song.id);
+    } else {
+      const includeProb = 1 / (1 + skipStreak);
+      if (Math.random() < includeProb) bag.push(song.id);
+    }
+  }
+  if (bag.length === 0 && songs.length > 0) {
+    for (const song of songs) bag.push(song.id);
   }
   return shuffle(bag);
 }
