@@ -9,29 +9,22 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['icon.svg', 'apple-touch-icon.svg'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'ViefPiano',
         short_name: 'ViefPiano',
         description: 'Kies random een pianonummer uit je oefenlijst.',
+        lang: 'nl',
         theme_color: '#1f1f1f',
         background_color: '#121212',
         display: 'standalone',
         scope: '/ViefPiano/',
         start_url: '/ViefPiano/',
         icons: [
-          {
-            src: 'icon.svg',
-            sizes: '192x192 512x512',
-            type: 'image/svg+xml',
-            purpose: 'any',
-          },
-          {
-            src: 'icon.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'maskable',
-          },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
         ],
       },
       workbox: {

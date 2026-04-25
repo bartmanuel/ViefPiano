@@ -866,6 +866,50 @@ implementatie-geschiedenis bewaart.
 - Migratie heelt oudere shapes.
 - Build: 63 KB JS / 23 KB gzipped, 0 warnings.
 
+### Fase 8 — Recap, install-polish, kleine UI-fix
+- Status: ✅ klaar
+- Trigger: GitHub-issues #5, #6, #7.
+
+**Issue #7 — Skip-knop emoji weg**
+- ⏭ uit "Skip"-knop weggehaald, ✓ uit "Klaar — Volgende".
+
+**Issue #5 — Maandoverzicht (Duolingo-recap)**
+- Nieuw `playLog: [{songId, ts}]` per profiel. Wordt aangevuld in
+  `advance('next')` én `markPlayed()`. Bound op ~13 maanden zodat
+  localStorage niet onbeperkt groeit (~65 KB max bij 100 plays/maand).
+- Nieuw `src/lib/recap.js` met `monthString()`, `previousMonthStr()`,
+  `nextMonthStr()`, `formatMonthLabel()` (Nederlandse maandnamen),
+  `getMonthRecap(profile, monthStr)` en `shouldShowRecapBanner(profile)`.
+- Recap aggregeert per maand: totalPlays, daysPlayed, longestStreakInMonth
+  (afgeleid uit `streak.history`), top-3 songs.
+- Nieuw `routes/RecapScreen.svelte` — eigen scherm, prev/next-maand
+  navigatie, lege-staat-tekst, 3-stat grid + top-3 lijst.
+- Banner op PlayScreen: zodra de vorige maand data heeft en je 'm nog niet
+  bekeken hebt, zie je `📅 Bekijk je <maand>-overzicht`. Klikken opent
+  recap; sluiten markeert die maand als gezien (`lastDismissedRecapMonth`).
+- Knop "Maandoverzicht" onderaan ListScreen voor handmatige toegang
+  (altijd, ongeacht banner).
+- App.svelte router uitgebreid met `'recap'` screen.
+- Tests: 7 plays in mei-data → totalPlays=7, daysPlayed=5,
+  longestStreakInMonth=4 (1-2-3-4 met gat na 4), top-3 correct
+  gesorteerd. Empty maand → `hasData=false`.
+
+**Issue #6 — Installable PWA**
+- Was technisch al klaar in fase 6 (manifest, service worker, scope
+  `/ViefPiano/`, display `standalone`). Maar SVG-only icons kunnen op
+  oudere Android-versies de install-prompt remmen.
+- **PNG iconen toegevoegd**: `icon-192.png`, `icon-512.png`,
+  `apple-touch-icon.png` gegenereerd uit de SVG-bron via een nieuw script
+  `scripts/gen-icons.mjs` (gebruikt `@resvg/resvg-js` als devDep).
+  Manifest icons-array geprefereerd in PNG, met SVG als fallback.
+- `index.html` apple-touch-icon link wijst nu naar de PNG (iOS-rendert die
+  scherper op het beginscherm).
+- `manifest.lang: 'nl'` toegevoegd zodat screen readers en zoekmachines de
+  taal correct rapporteren.
+- Verifiëren in production: live manifest check + assets allemaal HTTP 200.
+- Build precachet nu 10 entries (was 7) door de extra PNGs — totaal nog
+  altijd onder 80 KB.
+
 ### Wat nu nog handmatig moet
 1. **GitHub repo aanmaken** met naam `ViefPiano` (exact deze capitalization),
    push naar `main`, Settings → Pages → Source = "GitHub Actions".

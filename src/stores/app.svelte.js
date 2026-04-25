@@ -186,10 +186,12 @@ export function advance(action = 'next') {
   const leaving = leavingId ? p.songs.find((s) => s.id === leavingId) : null;
 
   if (action === 'next' && leaving) {
-    leaving.lastPlayedAt = new Date().toISOString();
+    const now = new Date().toISOString();
+    leaving.lastPlayedAt = now;
     leaving.playCount = (leaving.playCount ?? 0) + 1;
     leaving.skipStreak = 0; // wel gespeeld → reset demotie
     extendStreak(p.streak); // dag-streak alleen op echt-gespeeld
+    appendPlayLog(p, leaving.id, now);
   }
 
   if (action === 'skip' && leaving) {
@@ -236,10 +238,12 @@ export function markPlayed(songId) {
   const song = p.songs.find((s) => s.id === songId);
   if (!song) return;
 
-  song.lastPlayedAt = new Date().toISOString();
+  const now = new Date().toISOString();
+  song.lastPlayedAt = now;
   song.playCount = (song.playCount ?? 0) + 1;
   song.skipStreak = 0;
   extendStreak(p.streak);
+  appendPlayLog(p, song.id, now);
 
   p.history.push(song.id);
   const maxHistory = Math.max(ANTI_REPEAT_WINDOW * 4, 10);
@@ -250,6 +254,29 @@ export function markPlayed(songId) {
   const idx = p.bag.indexOf(song.id);
   if (idx >= 0) p.bag.splice(idx, 1);
 
+  persist();
+}
+
+/**
+ * Sla een play-event op in profile.playLog. Bound op ~13 maanden zodat
+ * localStorage niet onbeperkt groeit (100 plays/maand × 13 mnd = 1300
+ * entries × ~50 byte ≈ 65 KB; ruim binnen quota).
+ */
+function appendPlayLog(p, songId, ts) {
+  if (!Array.isArray(p.playLog)) p.playLog = [];
+  p.playLog.push({ songId, ts });
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - 13);
+  const cutoffIso = cutoff.toISOString();
+  if (p.playLog.length > 200 && p.playLog[0].ts < cutoffIso) {
+    p.playLog = p.playLog.filter((e) => e.ts >= cutoffIso);
+  }
+}
+
+export function dismissRecap(monthStr) {
+  const p = currentProfile();
+  if (!p) return;
+  p.lastDismissedRecapMonth = monthStr;
   persist();
 }
 

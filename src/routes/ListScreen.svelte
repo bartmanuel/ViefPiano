@@ -152,8 +152,9 @@
     {/if}
 
     <div class="io">
-      <button onclick={onExport} disabled={!songs.length}>⬇ Exporteer JSON</button>
-      <button onclick={onImportClick}>⬆ Importeer JSON</button>
+      <button onclick={() => setScreen('recap')}>Maandoverzicht</button>
+      <button onclick={onExport} disabled={!songs.length}>Exporteer JSON</button>
+      <button onclick={onImportClick}>Importeer JSON</button>
       <input
         type="file"
         accept="application/json,.json"

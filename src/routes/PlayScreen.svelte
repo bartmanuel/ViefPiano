@@ -8,6 +8,7 @@
     togglePracticing,
   } from '../stores/app.svelte.js';
   import { displayStreak } from '../lib/streak.js';
+  import { shouldShowRecapBanner, formatMonthLabel, previousMonthStr } from '../lib/recap.js';
 
   $effect(() => {
     ensureCurrent();
@@ -17,6 +18,8 @@
   const songs = $derived(profile?.songs ?? []);
   const current = $derived(songs.find((s) => s.id === app.currentSongId) ?? null);
   const streak = $derived(profile ? displayStreak(profile.streak) : 0);
+  const showBanner = $derived(shouldShowRecapBanner(profile));
+  const recapMonthLabel = $derived(formatMonthLabel(previousMonthStr()));
 
   function onNext() {
     advance('next');
@@ -42,6 +45,13 @@
     {/if}
     <button class="menu" onclick={() => setScreen('list')} aria-label="Lijst">☰</button>
   </header>
+
+  {#if showBanner}
+    <button class="recapbanner" onclick={() => setScreen('recap')}>
+      <span>📅 Bekijk je {recapMonthLabel}-overzicht</span>
+      <span class="arrow">→</span>
+    </button>
+  {/if}
 
   <div class="stage">
     {#if current}
@@ -69,8 +79,8 @@
 
   {#if current}
     <footer class="actions">
-      <button class="skip" onclick={onSkip}>⏭ Skip</button>
-      <button class="primary big" onclick={onNext}>✓ Klaar — Volgende</button>
+      <button class="skip" onclick={onSkip}>Skip</button>
+      <button class="primary big" onclick={onNext}>Klaar — Volgende</button>
     </footer>
   {/if}
 </section>
@@ -124,6 +134,24 @@
     border: none;
     font-size: 1.4rem;
     padding: 0.25rem 0.5rem;
+  }
+  .recapbanner {
+    margin: 0.6rem 0.75rem 0;
+    padding: 0.7rem 1rem;
+    background: rgba(246, 195, 68, 0.1);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    text-align: left;
+  }
+  .recapbanner .arrow {
+    color: var(--primary);
+    font-weight: 600;
   }
   .stage {
     flex: 1;

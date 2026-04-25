@@ -19,6 +19,8 @@ function defaultProfile(id, name) {
     bag: [],
     lastPlayedId: null,
     streak: defaultStreak(),
+    playLog: [],
+    lastDismissedRecapMonth: null,
     settings: { practicingWeight: 2 },
   };
 }
@@ -63,6 +65,8 @@ function migrate(data) {
     if (!p.createdAt) p.createdAt = new Date().toISOString();
     if (!p.streak) p.streak = defaultStreak();
     if (!Array.isArray(p.streak.history)) p.streak.history = [];
+    if (!Array.isArray(p.playLog)) p.playLog = [];
+    if (p.lastDismissedRecapMonth === undefined) p.lastDismissedRecapMonth = null;
 
     // Songs: vul missende velden voor pre-fase-7 data.
     for (const s of p.songs) {
