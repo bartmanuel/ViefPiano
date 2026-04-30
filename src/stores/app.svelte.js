@@ -257,6 +257,17 @@ export function markPlayed(songId) {
   persist();
 }
 
+export function decrementPlayCount(songId) {
+  const p = currentProfile();
+  if (!p) return;
+  const song = p.songs.find((s) => s.id === songId);
+  if (!song) return;
+  const next = Math.max(0, (song.playCount ?? 0) - 1);
+  if (next === song.playCount) return;
+  song.playCount = next;
+  persist();
+}
+
 /**
  * Sla een play-event op in profile.playLog. Bound op ~13 maanden zodat
  * localStorage niet onbeperkt groeit (100 plays/maand × 13 mnd = 1300

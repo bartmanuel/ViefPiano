@@ -8,6 +8,7 @@
     setScreen,
     importProfileData,
     markPlayed,
+    decrementPlayCount,
   } from '../stores/app.svelte.js';
   import { downloadProfile, parseImport } from '../lib/io.js';
   import { displayStreak } from '../lib/streak.js';
@@ -134,12 +135,13 @@
       <ul>
         {#each songs as song (song.id)}
           <li class="row" class:practicing={song.practicing}>
-            <button
-              class="rowmain"
-              onclick={() => (expandedId = expandedId === song.id ? null : song.id)}
-            >
+            <div class="rowmain">
               <span class="star" aria-hidden="true">{song.practicing ? '★' : '☆'}</span>
-              <span class="meta">
+              <button
+                class="metabtn"
+                onclick={() => (expandedId = expandedId === song.id ? null : song.id)}
+                aria-expanded={expandedId === song.id}
+              >
                 <span class="title">{song.title}</span>
                 <span class="sub">
                   {#if song.composer}<span class="composer">{song.composer}</span>{/if}
@@ -150,9 +152,21 @@
                     </span>
                   {/if}
                 </span>
-              </span>
-              <span class="chev">{expandedId === song.id ? '▾' : '▸'}</span>
-            </button>
+              </button>
+              <div class="counter">
+                <button
+                  class="ctr"
+                  onclick={() => decrementPlayCount(song.id)}
+                  disabled={(song.playCount ?? 0) === 0}
+                  aria-label="Eén keer minder gespeeld"
+                >−</button>
+                <button
+                  class="ctr plus"
+                  onclick={() => markPlayed(song.id)}
+                  aria-label="Eén keer gespeeld"
+                >+</button>
+              </div>
+            </div>
             {#if expandedId === song.id}
               <div class="actions">
                 <button onclick={() => markPlayed(song.id)}>✓ Gespeeld</button>
@@ -296,14 +310,42 @@
   .rowmain {
     width: 100%;
     display: grid;
-    grid-template-columns: 2rem 1fr 1.5rem;
+    grid-template-columns: 2rem 1fr auto;
     align-items: center;
     gap: 0.5rem;
     padding: 0.9rem 1rem;
+  }
+  .metabtn {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 0;
     background: transparent;
     border: none;
     border-radius: 0;
+    padding: 0;
     text-align: left;
+  }
+  .counter {
+    display: flex;
+    gap: 0.35rem;
+  }
+  .ctr {
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    border-radius: 999px;
+    font-size: 1.1rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ctr.plus {
+    background: var(--primary);
+    color: var(--primary-text);
+    border-color: var(--primary);
+    font-weight: 700;
   }
   .star {
     color: var(--primary);
@@ -367,10 +409,6 @@
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-  }
-  .chev {
-    color: var(--muted);
-    justify-self: end;
   }
   .actions {
     display: flex;
