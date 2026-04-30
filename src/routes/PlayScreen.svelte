@@ -90,7 +90,6 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 100dvh;
   }
   .topbar {
     padding: 0.75rem 1rem;

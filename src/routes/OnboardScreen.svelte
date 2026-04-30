@@ -36,7 +36,6 @@
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
-    min-height: 100dvh;
   }
   .card {
     display: flex;
