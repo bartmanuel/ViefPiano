@@ -17,6 +17,7 @@
   let expandedId = $state(null);
   let fileInput; // bound ref
   let importMsg = $state(null); // {type: 'ok'|'err', text}
+  let menuOpen = $state(false);
 
   const profile = $derived(currentProfile());
   const songs = $derived(profile?.songs ?? []);
@@ -24,11 +25,13 @@
   const longestStreak = $derived(profile?.streak?.longest ?? 0);
 
   function onExport() {
+    menuOpen = false;
     if (!profile) return;
     downloadProfile($state.snapshot(profile));
   }
 
   function onImportClick() {
+    menuOpen = false;
     importMsg = null;
     fileInput?.click();
   }
@@ -85,7 +88,22 @@
   <header class="topbar">
     <button class="back" onclick={() => setScreen('play')} aria-label="Terug">←</button>
     <h1>Mijn Lijst</h1>
-    <span class="spacer"></span>
+    <div class="menuwrap">
+      <button
+        class="menu"
+        onclick={() => (menuOpen = !menuOpen)}
+        aria-label="Menu"
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+      >☰</button>
+      {#if menuOpen}
+        <div class="menubackdrop" onclick={() => (menuOpen = false)} aria-hidden="true"></div>
+        <div class="menupanel" role="menu">
+          <button role="menuitem" onclick={onExport} disabled={!songs.length}>Export lijst</button>
+          <button role="menuitem" onclick={onImportClick}>Import lijst</button>
+        </div>
+      {/if}
+    </div>
   </header>
 
   <div class="scroll">
@@ -105,6 +123,8 @@
         </div>
       </div>
     {/if}
+
+    <button class="recap" onclick={() => setScreen('recap')}>Maandoverzicht</button>
 
     <button class="primary add" onclick={openNew}>+ Nummer toevoegen</button>
 
@@ -151,21 +171,16 @@
       </ul>
     {/if}
 
-    <div class="io">
-      <button onclick={() => setScreen('recap')}>Maandoverzicht</button>
-      <button onclick={onExport} disabled={!songs.length}>Exporteer JSON</button>
-      <button onclick={onImportClick}>Importeer JSON</button>
-      <input
-        type="file"
-        accept="application/json,.json"
-        bind:this={fileInput}
-        onchange={onImportFile}
-        hidden
-      />
-      {#if importMsg}
-        <p class="msg {importMsg.type}">{importMsg.text}</p>
-      {/if}
-    </div>
+    <input
+      type="file"
+      accept="application/json,.json"
+      bind:this={fileInput}
+      onchange={onImportFile}
+      hidden
+    />
+    {#if importMsg}
+      <p class="msg {importMsg.type}">{importMsg.text}</p>
+    {/if}
   </div>
 </section>
 
@@ -204,8 +219,46 @@
     padding: 0.25rem 0.5rem;
     justify-self: start;
   }
-  .spacer {
-    width: 2.5rem;
+  .menuwrap {
+    position: relative;
+    justify-self: end;
+  }
+  .menu {
+    background: transparent;
+    border: none;
+    font-size: 1.4rem;
+    padding: 0.25rem 0.5rem;
+  }
+  .menubackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+  }
+  .menupanel {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    right: 0;
+    z-index: 11;
+    min-width: 12rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    padding: 0.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .menupanel button {
+    background: transparent;
+    border: none;
+    border-radius: calc(var(--radius) - 4px);
+    text-align: left;
+    padding: 0.7rem 0.85rem;
+    font-size: 0.95rem;
+  }
+  .menupanel button:hover:not(:disabled) {
+    background: var(--surface-2);
   }
   .scroll {
     flex: 1;
@@ -214,7 +267,8 @@
     flex-direction: column;
     gap: 0.75rem;
   }
-  .add {
+  .add,
+  .recap {
     width: 100%;
   }
   .empty {
@@ -335,15 +389,6 @@
     color: var(--muted);
     font-style: italic;
     white-space: pre-wrap;
-  }
-  .io {
-    margin-top: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  .io button {
-    width: 100%;
   }
   .msg {
     margin: 0.25rem 0 0;
